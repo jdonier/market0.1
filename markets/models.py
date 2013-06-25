@@ -185,7 +185,7 @@ class TraderManager(models.Manager):
 				PNL=volumeBuy[i]*(1-avgBuy[i])-volumeSell[i]*(1-avgSell[i])-volumeSellLimits[i]*(1-avgSellLimits[i])
 				for j in range(0, nbMarkets):
 					if i<>j:
-						PNL+=volumeSell[i]*avgSell[i]-volumeBuy[i]*avgBuy[i]-volumeBuyLimits[i]*avgBuyLimits[i]
+						PNL+=volumeSell[j]*avgSell[j]-volumeBuy[j]*avgBuy[j]-volumeBuyLimits[j]*avgBuyLimits[j]
 				worstPNL=min(worstPNL, PNL)	
 			else:
 				worstPNL=volumeBuy[i]*(1-avgBuy[i])-volumeSell[i]*(1-avgSell[i])-volumeSellLimits[i]*(1-avgSellLimits[i])
@@ -210,7 +210,7 @@ class TraderManager(models.Manager):
 				PNL=volumeBuy[i]*(1-avgBuy[i])-volumeSell[i]*(1-avgSell[i])
 				for j in range(0, nbMarkets):
 					if i<>j:
-						PNL+=volumeSell[i]*avgSell[i]-volumeBuy[i]*avgBuy[i]
+						PNL+=volumeSell[j]*avgSell[j]-volumeBuy[j]*avgBuy[j]
 				worstPNL=min(worstPNL, PNL)	
 			else:
 				worstPNL=volumeBuy[i]*(1-avgBuy[i])-volumeSell[i]*(1-avgSell[i])
