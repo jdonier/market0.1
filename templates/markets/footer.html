@@ -1,0 +1,14 @@
+﻿<meta charset="UTF-8">
+<footer>
+  <nav class="round">
+    <ul>
+	{% if request.user.is_superuser %}
+      <li><a href="{% url 'markets.views.createGlobalEvent' %}" >Create Global Event</a></li>
+	{% endif %}
+      <li><a href="{% url 'markets.views.allGlobalEvents' %}" >Global Events</a></li>
+      <li><a href="{% url 'markets.views.about' %}" >About Us</a></li>
+      <li><a href="{% url 'markets.views.contact' %}" >Contact</a></li>
+      <li><a href="http://www.bloomberg.com/">News</a></li>
+    </ul>
+  </nav>
+</footer>

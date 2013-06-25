@@ -1,0 +1,26 @@
+﻿{% extends "markets/base.html" %}
+
+{% block content %}
+    <h1>Sign Up</h1>
+
+  <p>
+    
+  <form action="{% url 'markets.views.signup' %}" method="post">{% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="fieldWrapper">
+        {{ form.username.errors }}</br>
+        {{ form.username }}
+    </div>
+    <div class="fieldWrapper">
+        {{ form.email.errors }}</br>
+        {{ form.email }}
+    </div>
+    <div class="fieldWrapper">
+        {{ form.password.errors }}</br>
+        {{ form.password }}
+    </div></br>
+    <p><input class="signup_button round" type="submit" value="Submit" /> </p>
+</form>
+  </p>
+{% endblock %}
+  

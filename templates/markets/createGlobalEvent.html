@@ -1,0 +1,22 @@
+﻿{% extends "markets/base.html" %}
+
+{% block content %}
+    <h1>Create</h1>
+
+  <p>
+   <form action="{% url 'markets.views.createGlobalEvent' %}" method="post">{% csrf_token %}
+    {{ geform.non_field_errors }}
+    <div class="fieldWrapper">
+        {{ geform.title.errors }}</br>
+        {{ geform.title }}
+    </div>
+    <div class="fieldWrapper">
+        {{ geform.dateClose.errors }}</br>
+        {{ geform.dateClose }}
+    </div></br>
+    <p><input class="signup_button round" type="submit" value="Submit" /> </p>
+</form>
+	
+  </p>
+{% endblock %}
+  

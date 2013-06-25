@@ -1,0 +1,53 @@
+﻿{% extends "markets/base.html" %}
+
+{% block content %}
+<table class="market" summary="Market informations">
+  <tr>
+      <h1>
+        {{market.outcome}}
+      </h1>
+	  <p>  </br> {{market.event.title}}, {{market.description}}</br></br>
+			Created by {{market.event.creator}}, {{market.event.dateCreation}}  
+			{% if request.user.is_staff %}
+			Delete this market - Settle Market : Yes / No
+			{% endif %}
+			</br></br>
+			Buy volume : {{buyVolume}}</br>
+			Sell volume : {{sellVolume}}</br>
+			Traded volume : {{tradedVolume}}</br>
+			Open interest : {{openInterest}}</br>
+	  </p>
+	  
+		{% if request.user.is_authenticated %}
+		<form method="post" action=".">
+			   {% csrf_token %}
+			   {{ oform.as_p }}
+			<input type="submit"/>
+		</form>
+		{% endif %}</br></br>
+		
+	{{test}}
+	  Sell orders :</br></br>
+	  {% for order in limitsSell %}
+	  {{order.price}} - {{order.volume}} </br>
+	  {% endfor %}</br>	
+		
+	  Buy Orders :</br></br>
+	  {% for order in limitsBuy %}
+	  {{order.price}} - {{order.volume}} </br>
+	  {% endfor %}</br>
+	  
+	  
+		{% if request.user.is_authenticated %}
+		 Deposit : {{deposit}} - Available : {{available}} - MinPNL : {{risk}}</br>
+		 Avg Price Buy : {{avgPriceBuy}} - Avg Price Sell : {{avgPriceSell}} </br>
+		{% endif %}</br></br>
+		
+	  Trades :</br></br>
+	  {% for trade in trades %}
+	  {{ trade.timestamp }} - {{trade.price}} - {{trade.volume}} / {{trade.side}} </br>
+	  {% endfor %}</br>
+  </tr>
+</table>
+{% endblock %}
+  

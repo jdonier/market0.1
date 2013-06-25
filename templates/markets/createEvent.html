@@ -1,0 +1,26 @@
+﻿{% extends "markets/base.html" %}
+
+{% block content %}
+    <h1>New Event</h1>
+
+  <p>
+   <form action="{% url 'markets.views.createEvent' idgEvent %}" method="post">{% csrf_token %}
+    {{ eform.non_field_errors }}
+    <div class="fieldWrapper">
+        {{ eform.title.errors }}</br>
+        {{ eform.title }}
+    </div>
+    <div class="fieldWrapper">
+        {{ eform.description.errors }}</br>
+        {{ eform.description }}
+    </div></br>
+    <div class="fieldWrapper">
+        {{ eform.nbMarkets.errors }}</br>
+        {{ eform.nbMarkets }}
+    </div></br>
+    <p><input class="signup_button round" type="submit" value="Submit" /> </p>
+</form>
+	
+  </p>
+{% endblock %}
+  

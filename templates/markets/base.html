@@ -1,0 +1,18 @@
+﻿<!DOCTYPE html>
+{% load static %}
+<html>
+  <head>
+	{% include "markets/stylesheets.html" %}
+    <title>Cerbère Capital | {{titre}}</title>
+  </head>
+  <body>
+  <img alt="fullbi" src="{% static 'fond.png' %}" id="fullbi" /> 
+    <div class="container" id="wrapper">
+	{% include "markets/header.html" %}
+      <section class="round">
+    {% block content %}{% endblock %}
+      </section>
+	{% include "markets/footer.html" %}
+    </div>
+  </body>
+</html>

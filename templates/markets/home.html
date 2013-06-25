@@ -1,0 +1,25 @@
+﻿{% extends "markets/base.html" %}
+
+{% block content %}
+    <h1>Home</h1>
+
+  <p>
+    Welcome!</br>
+	
+	{% if request.user.is_authenticated %}
+	<form action="{% url 'markets.views.home' %}" method="post">{% csrf_token %}
+    {{ trform.non_field_errors }}
+    <div class="fieldWrapper">
+        {{ trform.type.errors }}</br>
+        {{ trform.type }}
+    </div>
+    <div class="fieldWrapper">
+        {{ trform.volume.errors }}</br>
+        {{ trform.volume }}
+    </div></br>
+    <p><input class="signup_button round" type="submit" value="Submit" /> </p>
+</form>
+{% endif %}	
+  </p>
+{% endblock %}
+  

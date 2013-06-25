@@ -1,0 +1,411 @@
+﻿#-*- coding: utf-8 -*-
+from django.http import HttpResponse, HttpResponseRedirect, Http404
+from django.shortcuts import redirect
+from datetime import datetime
+from django.shortcuts import render, get_object_or_404
+import string, random
+from django.core.urlresolvers import reverse
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout 
+from django.core.paginator import Paginator, EmptyPage  # Ne pas oublier l'importation
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import permission_required
+from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models import Avg, Max, Min, Sum, Count
+from markets.forms import SignupForm, LoginForm, GlobalEventForm, EventForm, MarketForm, OrderForm, TransferForm
+from markets.models import GlobalEvent, Event, Market, Trader, Trade, Limit, OBHistory, Transfer
+
+def market(request, idMarket):	
+	from django.db import connection
+	form2 = LoginForm()
+	titre="Market"
+	market=Market.objects.get(id=idMarket)
+	trader=Trader()
+	if request.user.is_authenticated:
+		trader=Trader.objects.get(user=request.user)
+		if request.method == 'POST':
+			oform = OrderForm(request.POST)
+			if oform.is_valid():
+				volume=oform.cleaned_data['volume']
+				price=oform.cleaned_data['price']
+				side=oform.cleaned_data['side']
+				if volume*price<=Trader.objects.availableBalance(trader=trader):
+					execute(market, trader, side, price, volume)
+		else:
+			oform = OrderForm()
+		deposit=Trader.objects.deposit(trader=trader)
+		available=Trader.objects.availableBalance(trader=trader)
+		risk=-Trader.objects.riskEvent(trader=trader, event=market.event)
+		avgPriceSell=Trader.objects.avgPriceLimits(trader=trader, market=market, side=-1)
+		avgPriceBuy=Trader.objects.avgPriceLimits(trader=trader, market=market, side=1)
+	else:
+		oform = TradeForm()
+	cursor = connection.cursor()	
+	cursor.execute("SELECT price price, sum(volume) volume FROM markets_limit WHERE side=1 and market_id=%i GROUP BY price ORDER BY price DESC" % market.id)
+	limitsBuy = dictfetchall(cursor)
+	cursor = connection.cursor()	
+	cursor.execute("SELECT price price, sum(volume) volume FROM markets_limit WHERE side=-1 and market_id=%i GROUP BY price ORDER BY price DESC" % market.id)
+	limitsSell = dictfetchall(cursor)
+	cursor = connection.cursor()	
+	cursor.execute("SELECT price price, volume volume, side side, timestamp timestamp FROM markets_trade WHERE not nullTrade and market_id=%i ORDER BY timestamp DESC" % market.id)
+	trades = dictfetchall(cursor)
+	#limitsBuy=Limit.objects.filter(market=market, side=1).group_by('price').order_by('-price')
+	#limitsSell=Limit.objects.filter(market=market, side=-1).group_by('price').order_by('-price')
+	buyVolume=Limit.objects.filter(market=market, side=1).aggregate(Sum('volume'))['volume__sum']
+	if buyVolume==None:
+		buyVolume=0
+	sellVolume=Limit.objects.filter(market=market, side=-1).aggregate(Sum('volume'))['volume__sum']
+	if sellVolume==None:
+		sellVolume=0
+	tradedVolume=Market.objects.tradedVolume(market=market)
+	if tradedVolume==None:
+		tradedVolume=0
+	openInterest=Market.objects.openInterest(market=market)
+	return render(request, 'markets/market.html', locals())
+	
+def event(request, idEvent, page=1):	
+	form2 = LoginForm()
+	titre="Event"
+	event=Event.objects.get(id=idEvent)
+	markets=Market.objects.filter(event=event)
+	paginator = Paginator(markets, 4)
+	try:
+		minis = paginator.page(page)
+	except EmptyPage:
+		minis = paginator.page(paginator.num_pages)
+	return render(request, 'markets/event.html', locals())
+
+def globalEvent(request, idgEvent, page=1):	
+	form2 = LoginForm()
+	titre="Event"
+	gEvent=GlobalEvent.objects.get(id=idgEvent)
+	events=Event.objects.filter(globalEvent=gEvent)
+	paginator = Paginator(events, 4)
+	try:
+		minis = paginator.page(page)
+	except EmptyPage:
+		minis = paginator.page(paginator.num_pages)
+	return render(request, 'markets/globalEvent.html', locals())
+
+def allGlobalEvents(request, page=1):
+	form2 = LoginForm()	
+	titre="All Events"
+	gEvents=GlobalEvent.objects.all()
+	paginator = Paginator(gEvents, 4)
+	try:
+		minis = paginator.page(page)
+	except EmptyPage:
+		minis = paginator.page(paginator.num_pages)
+	return render(request, 'markets/allGlobalEvents.html', locals())	
+
+def createMarket(request, idEvent):
+	form2 = LoginForm()
+	title="non"
+	event=Event.objects.get(id=idEvent)
+	if request.method == "POST":
+		mform = MarketForm(request.POST)
+		if mform.is_valid():
+			#for i in range(0, event.nbMarkets):
+			market=Market()
+			market.event=event
+			#market.outcome = mform.cleaned_data['outcome_%i' % i]
+			market.outcome = mform.cleaned_data['outcome']
+			market.save()
+			mform = MarketForm()	
+		return render(request, 'markets/createMarket.html', locals())	
+	else:
+		mform = MarketForm()	
+		return render(request, 'markets/createMarket.html', locals())	
+
+def createEvent(request, idgEvent):
+	form2 = LoginForm()
+	if request.method == "POST":
+		eform = EventForm(request.POST)
+		if eform.is_valid():
+			event=Event()
+			event.globalEvent=GlobalEvent.objects.get(id=idgEvent)
+			event.title = eform.cleaned_data['title']
+			event.description = eform.cleaned_data['description']
+			event.nbMarkets = eform.cleaned_data['nbMarkets']
+			event.creator=request.user.username
+			event.save()
+			return HttpResponseRedirect(reverse('markets.views.createMarket', args=(event.id,)))
+		else:	
+			return render(request, 'markets/createEvent.html', locals())	
+	else:
+		eform = EventForm()	
+		return render(request, 'markets/createEvent.html', locals())	
+
+def createGlobalEvent(request):
+	form2 = LoginForm()
+	if request.method == "POST":   
+		geform = GlobalEventForm(request.POST)
+		if geform.is_valid():
+			gEvent=GlobalEvent()
+			gEvent.title = geform.cleaned_data['title']
+			gEvent.dateClose = geform.cleaned_data['dateClose']
+			gEvent.save()
+			return HttpResponseRedirect(reverse('markets.views.createEvent', args=(gEvent.id,)))	
+		else:	
+			return render(request, 'markets/createGlobalEvent.html', locals())	
+	else:
+		geform = GlobalEventForm()	
+		return render(request, 'markets/createGlobalEvent.html', locals())	
+	
+
+def signup(request):
+	if request.method == "POST":   
+		form = SignupForm(request.POST)
+		if form.is_valid():
+			user=User()
+			user.username = form.cleaned_data['username']
+			user.email = form.cleaned_data['email']
+			user.set_password(form.cleaned_data['password'])
+			user.save()
+			trader=Trader(user=user)
+			trader.save()
+			user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password'])  #Nous vérifions si les données sont correctes
+			login(request, user)
+			#return redirect('posts.views.user', id_user=user.id)
+			return redirect('markets.views.home')
+	else:
+		form2 = LoginForm()
+		form = SignupForm()	
+	return render(request, 'markets/signup.html', locals())	
+
+def signin(request):
+	error = False    
+	form = LoginForm(request.POST)
+	if form.is_valid():
+		username = form.cleaned_data["username"]  # Nous récupérons le nom d'utilisateur
+		password = form.cleaned_data["password"]  # … et le mot de passe
+		user = authenticate(username=username, password=password)  #Nous vérifions si les données sont correctes
+		if user:  # Si l'objet renvoyé n'est pas None
+			login(request, user)  # nous connectons l'utilisateur
+		else: #sinon une erreur sera affichée
+			error = True
+	return redirect('markets.views.home')
+
+def home(request):	
+	titre="Home"
+	form2 = LoginForm()	
+	if request.method == "POST" and request.user.is_authenticated:   
+		trform = TransferForm(request.POST)
+		if trform.is_valid():
+			transfer=Transfer()
+			transfer.trader=Trader.objects.get(user=request.user)
+			transfer.type=trform.cleaned_data["type"]
+			transfer.volume=trform.cleaned_data["volume"]
+			transfer.save()
+	else:
+		trform = TransferForm()	
+	return render(request, 'markets/home.html', locals())
+
+
+def contact(request):
+	titre="Contact"
+	form2 = LoginForm()
+	return render(request, 'markets/contact.html', locals())	
+	
+	
+def help(request):
+	titre="Help"
+	form2 = LoginForm()
+	return render(request, 'markets/help.html', locals())	
+	
+def about(request):
+	titre="About"
+	form2 = LoginForm()
+	return render(request, 'markets/about.html', locals())	
+
+
+def signout(request):
+	logout(request)
+	return redirect('markets.views.home')
+
+
+'''
+@login_required	
+def user(request, id_user):	
+	user=User.objects.get(id=id_user)
+	trader=Trader.objects.get(user=user)
+	markets=Market.objects.all()
+	trades=Trade.objects.all()
+	myTrades=[]
+	for market in markets:
+		myTrades.append({ 'market':market.name, 'Tradesyes':Trade.objects.limits(id_user=id_user, id_market=market.id)[1], 'Tradesno':Trade.objects.limits(id_user=id_user, id_market=market.id)[0]})
+	titre=u'{0}'.format(user.username)
+	return render(request, 'posts/show_user.html', locals())
+	
+def all_users(request, page=1):	
+	titre="All Users"
+	traders=Trader.objects.all()
+	paginator = Paginator(traders, 4)
+	try:
+		minis = paginator.page(page)
+	except EmptyPage:
+		minis = paginator.page(paginator.num_pages)
+	return render(request, 'posts/all_users.html', locals())	
+
+@login_required	
+def new_market(request):
+    if request.method == 'POST':  # S'il s'agit d'une requête POST
+        form = MarketForm(request.POST)  # Nous reprenons les données
+ 
+        if form.is_valid():
+			market=Market()
+			market.name = form.cleaned_data['name']
+			market.creator=request.user.username
+			market.description = form.cleaned_data['description']
+			market.save()
+			return redirect('posts.views.market', id_market=market.id)
+    else: # Si ce n'est pas du POST, c'est probablement une requête GET
+        form = MarketForm()  # Nous créons un formulaire vide
+ 
+    return render(request, 'posts/new_market.html', locals())
+	
+	
+@staff_member_required	
+def settle(request, id_market, yesno):	
+	market=Market.objects.get(id=id_market)
+	titre=""
+	trades=Trade.objects.filter(market=market)
+	limits=Trade.objects.alllimits(id_market=market.id)
+	for trade in trades:
+		if trade.type==1 and yesno=='1':
+			trader=trade.trader
+			trader.balance+=trade.volume/limits[1]*limits[0]
+			trader.save()
+		if trade.type==0 and yesno=='0':		
+			trader=trade.trader
+			trader.balance+=trade.volume/limits[0]*limits[1]
+			trader.save()	
+		if 	trade.type==1 and yesno=='0' or trade.type==0 and yesno=='1':
+			trader.balance-=trade.volume
+	market.delete()
+	return redirect(reverse(all_markets))		
+	
+@login_required	
+def market(request, id_market):	
+	from django.db import connection
+	market=Market.objects.get(id=id_market)
+	titre=u'{0}'.format(market.name)
+	trader=Trader()
+	if request.user.is_authenticated:
+		trader=Trader.objects.get(user=request.user)
+		if request.method == 'POST':
+			form = TradeForm(request.POST)
+			if form.is_valid():
+				volume=form.cleaned_data['volume']
+				price=form.cleaned_data['price']
+				type=form.cleaned_data['type']
+				if volume<=Trader.objects.balance(id_user=request.user.id):
+					execute(market, trader, type, price, volume)
+		else:
+			form = TradeForm()
+		available=Trader.objects.balance(id_user=request.user.id)		
+	limits=Trade.objects.alllimits(id_market=market.id)
+	buyVol=limits[1]
+	buySell=limits[0]
+	cursor = connection.cursor()	
+	cursor.execute("SELECT price price, sum(volume) volume FROM posts_trade WHERE type=1 GROUP BY price ORDER BY price DESC")
+	buyOrders = dictfetchall(cursor)
+	cursor = connection.cursor()	
+	cursor.execute("SELECT price price, sum(volume) volume FROM posts_trade WHERE type=0 GROUP BY price ORDER BY price DESC")
+	sellOrders = dictfetchall(cursor)
+	return render(request, 'posts/show_market.html', locals())	
+
+@staff_member_required	
+def delete_market(request, id_market):	
+	market=Market.objects.get(id=id_market)
+	market.delete()
+	titre="All Markets"
+	return redirect(reverse(all_markets))	
+	
+	
+def all_markets(request, page=1):	
+	titre="Markets"
+	markets=Market.objects.all()
+	paginator = Paginator(markets, 4)
+	try:
+		minis = paginator.page(page)
+	except EmptyPage:
+		minis = paginator.page(paginator.num_pages)
+	return render(request, 'posts/all_markets.html', locals())
+
+	
+@staff_member_required
+def delete_user(request, id_user):	
+	user=User.objects.get(id=id_user)
+	user.delete()
+	titre="All Users"
+	return redirect(reverse(all_users))
+	
+def home(request):	
+	titre="Home"
+	form = SignupForm()
+	form2 = ConnexionForm()
+	return render(request, 'posts/home2.html', locals())
+	
+def contact(request):
+	titre="Contact"
+	return render(request, 'posts/contact.html', locals())	
+	
+	
+def help(request):
+	titre="Help"
+	return render(request, 'posts/help.html', locals())	
+	
+def about(request):
+	titre="About"
+	return render(request, 'posts/about.html', locals())	
+'''	
+
+def dictfetchall(cursor):
+    "Returns all rows from a cursor as a dict"
+    desc = cursor.description
+    return [
+        dict(zip([col[0] for col in desc], row))
+        for row in cursor.fetchall()
+    ]
+	
+def execute(market, trader, side, price, volume):
+	volToExec=volume
+	while side=='1' and volToExec>0	and Limit.objects.filter(market=market, side=-1).aggregate(Min('price'))["price__min"]<>None and Limit.objects.filter(market=market, side=-1).aggregate(Min('price'))["price__min"]<=price:
+		priceMin=Limit.objects.filter(market=market, side=-1).aggregate(Min('price'))["price__min"]
+		timestampMin=Limit.objects.filter(market=market, price=priceMin, side=-1).aggregate(Min('timestamp'))["timestamp__min"]
+		order=Limit.objects.get(market=market, price=priceMin, timestamp=timestampMin, side=-1)
+		if order.volume<=volToExec:
+			trade=Trade(market=market, trader1=trader,trader2=order.trader, side=1, price=order.price, volume=order.volume, nullTrade=(trader==order.trader)) 
+			volInt=order.volume
+			order.delete()
+			volToExec-=volInt
+			trade.save()
+		else:
+			trade=Trade(market=market, trader1=trader, trader2=order.trader, side=1, price=order.price, volume=volToExec, nullTrade=(trader==order.trader)) 
+			order.volume-=volToExec	
+			order.save()		
+			volToExec=0
+			trade.save()
+			
+	while side=='-1' and volToExec>0 and Limit.objects.filter(market=market, side=1).aggregate(Max('price'))["price__max"]<>None and Limit.objects.filter(market=market, side=1).aggregate(Max('price'))["price__max"]>=price:
+		priceMax=Limit.objects.filter(market=market, side=1).aggregate(Max('price'))["price__max"]
+		timestampMin=Limit.objects.filter(market=market, price=priceMax, side=1).aggregate(Min('timestamp'))["timestamp__min"]
+		order=Limit.objects.get(market=market, price=priceMax, timestamp=timestampMin, side=1)	
+		if order.volume<=volToExec:
+			trade=Trade(market=market, trader1=trader, trader2=order.trader, side=-1, price=order.price, volume=order.volume, nullTrade=(trader==order.trader))
+			volInt=order.volume
+			order.delete()
+			volToExec-=volInt
+			trade.save()
+		else:
+			trade=Trade(market=market, trader1=trader, trader2=order.trader, side=-1, price=order.price, volume=volToExec, nullTrade=(trader==order.trader)) 
+			order.volume-=volToExec	
+			order.save()		
+			volToExec=0
+			trade.save()
+			
+	#Crée un limit order sur ce qui reste	
+	if volToExec>0:
+		limit=Limit(market=market, trader=trader, side=side, price=price, volume=volToExec)
+		limit.save()

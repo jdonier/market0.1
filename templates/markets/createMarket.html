@@ -1,0 +1,19 @@
+﻿{% extends "markets/base.html" %}
+
+{% block content %}
+    <h1>New Market</h1>
+
+  <p>
+   <form action="{% url 'markets.views.createMarket' idEvent %}" method="post">{% csrf_token %}
+    {{ mform.non_field_errors }}
+
+    <div class="fieldWrapper">
+        {{ mform.outcome.errors }}</br>
+        {{ mform.outcome }}
+    </div></br>
+    <p><input class="signup_button round" type="submit" value="Submit" /> </p>
+</form>
+	
+  </p>
+{% endblock %}
+  
