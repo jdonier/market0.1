@@ -1,52 +1,68 @@
 ﻿{% extends "markets/base.html" %}
 
 {% block content %}
-<table class="market" summary="Market informations">
+<table class="market"  summary="Market informations">
   <tr>
       <h1>
         {{market.outcome}}
       </h1>
-	  <p>  </br> {{market.event.title}}, {{market.description}}</br></br>
-			Created by {{market.event.creator}}, {{market.event.dateCreation}}  
+  <div id="market">
+	  <div id="summary">
+	  <p>  </br><a href="{% url 'markets.views.showEvent' market.event.id %}"> {{ market.event.title }}</a>, {{market.event.description}},
+			created by {{market.event.creator}}, {{market.event.dateCreation}} 
+			{% if settled %}
+			Settled : {{mwin}}
+			{% endif %}
 			{% if request.user.is_staff %}
-			Delete this market - Settle Market : Yes / No
+			<a href="{% url 'markets.views.deleteMarket' market.id %}" >Delete this market</a>
 			{% endif %}
 			</br></br>
-			Buy volume : {{buyVolume}}</br>
-			Sell volume : {{sellVolume}}</br>
-			Traded volume : {{tradedVolume}}</br>
-			Open interest : {{openInterest}}</br>
-	  </p>
-	  
+				  
 		{% if request.user.is_authenticated %}
-		<form method="post" action=".">
-			   {% csrf_token %}
-			   {{ oform.as_p }}
-			<input type="submit"/>
-		</form>
-		{% endif %}</br></br>
-		
-	{{test}}
-	  Sell orders :</br></br>
+		 Deposit : {{deposit}} - Available : {{available}} - MinPNL : {{risk}}</br>
+		 Avg Price Buy : {{avgPriceBuy}} - Avg Price Sell : {{avgPriceSell}} </br>
+		{% endif %}</br></br>	
+
+	  Traded volume : {{tradedVolume}}  /  Open interest : {{openInterest}}</br></br>
+	  Sell orders ({{sellVolume}}) :</br></br>
 	  {% for order in limitsSell %}
 	  {{order.price}} - {{order.volume}} </br>
 	  {% endfor %}</br>	
 		
-	  Buy Orders :</br></br>
+	  Buy Orders ({{buyVolume}}) :</br></br>
 	  {% for order in limitsBuy %}
 	  {{order.price}} - {{order.volume}} </br>
 	  {% endfor %}</br>
-	  
-	  
+				
+	  </p>
+	  </div>
+	  <div id="order">
 		{% if request.user.is_authenticated %}
-		 Deposit : {{deposit}} - Available : {{available}} - MinPNL : {{risk}}</br>
-		 Avg Price Buy : {{avgPriceBuy}} - Avg Price Sell : {{avgPriceSell}} </br>
-		{% endif %}</br></br>
-		
+		<form action="{% url 'markets.views.signup' %}" method="post">{% csrf_token %}
+			{{ oform.non_field_errors }}
+			<div class="fieldWrapper">
+				{{ oform.side.errors }}</br>
+				{{ oform.side }}
+			</div>
+			<div class="fieldWrapper">
+				{{ oform.price.errors }}</br>
+				{{ oform.price }}
+			</div>
+			<div class="fieldWrapper">
+				{{ oform.volume.errors }}</br>
+				{{ oform.volume }}
+			</div></br>
+			<p><input class="signup_button round" type="submit" value="Submit" /> </p>
+		</form>
+		{% endif %}
+	</div>
+	  <div id="trades">
 	  Trades :</br></br>
 	  {% for trade in trades %}
 	  {{ trade.timestamp }} - {{trade.price}} - {{trade.volume}} / {{trade.side}} </br>
 	  {% endfor %}</br>
+	 </div> 
+	 </div> 
   </tr>
 </table>
 {% endblock %}

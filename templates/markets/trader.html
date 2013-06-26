@@ -1,0 +1,18 @@
+﻿{% extends "markets/base.html" %}
+
+{% block content %}
+<table class="market" summary="Market informations">
+  <tr>
+      <h1>
+        {{trader.user.username}}
+      </h1>
+	  <p>  </br> {{trader.user.email}} - Active : {{trader.active}}
+			{% if request.user.is_staff %}
+			<a href="{% url 'markets.views.toggleActivateTrader' trader.user.id %}" > {{ action }} this trader</a>
+			{% endif %}
+	  </p>
+	  
+  </tr>
+</table>
+{% endblock %}
+  

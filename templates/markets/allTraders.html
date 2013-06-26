@@ -1,0 +1,37 @@
+﻿{% extends "markets/base.html" %}
+
+{% block content %}
+<table class="traders" summary="All Traders">
+  <tr>
+      <h1>
+        All Traders
+      </h1>
+	
+    <ul class="users">
+  {% for trader in minis %}
+    <li>
+      <a href="{% url 'showTrader' trader.user.id %}"> {{ trader.user.username }}</a> - {{ trader.user.email }}
+    </li>
+  {% endfor %}
+</ul>
+
+<div class="pagination">
+    <span class="step-links">
+       {% if minis.has_previous %}
+           <a href="{% url 'allGlobalEventsList' minis.previous_page_number %}">Précédente</a> -
+       {% endif %}
+ 
+       <span class="current">
+           Page {{ minis.number }} sur {{ minis.paginator.num_pages }}
+       </span>
+ 
+       {% if minis.has_next %}
+           - <a href="{% url 'allGlobalEventsList' minis.next_page_number %}">Suivante</a>
+       {% endif %}
+    </span>
+</div>
+
+  </tr>
+</table>
+{% endblock %}
+  

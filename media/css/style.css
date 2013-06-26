@@ -38,6 +38,7 @@ body {
 }
 
 
+
 header {
   position: fixed;
   margin: 0 auto;
@@ -76,8 +77,31 @@ footer{
 
 
 section h1 {
-  font-size: 400%;
+  font-size: 200%;
   font-family:"Arial";  
+}
+
+section #market{
+  font-size: 80%;
+  font-family:"Arial";  
+}
+
+section #order{
+  position: relative;
+  display: inline-block;
+  margin-right: 50px;
+}
+
+section #summary{
+  position: relative;
+  display: inline-block;
+  margin-right: 50px;
+}
+
+section #trades{
+  position: relative;
+  display: inline-block;
+  margin-right: 50px;
 }
 
 /* Liens */

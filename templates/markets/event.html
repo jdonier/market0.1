@@ -4,13 +4,31 @@
 <table class="event" summary="Event">
   <tr>
       <h1>
-        {{ event.title }}
+        {{ event.title }} 
       </h1>
 	
     <ul class="users">
+	 from <a href="{% url 'markets.views.showGlobalEvent' event.globalEvent.id %}"> {{ event.globalEvent.title }}</a> </br>
+	 {% if request.user.is_staff %} 
+		<a href="{% url 'markets.views.deleteEvent' event.id %}" >Delete</a> 
+		- Settle :  
+		{% if singleMarket %} 
+		<a href="{% url 'markets.views.settleEvent' event.id 1 %}" >Won</a> / <a href="{% url 'markets.views.settleEvent' event.id 0 %}" >Lost</a>
+		{% else %} 
+		{% for market in markets %} 
+		  <a href="{% url 'markets.views.settleEvent' event.id market.id %}" >{{market.outcome}} </a>
+		{% endfor %}
+		{% endif %}
+		{% if settled %}
+			<a href="{% url 'markets.views.unsettleEvent' event.id %}" >Unsettle </a>
+		{% endif %}
+	{% endif %} </br>
   {% for market in minis %}
     <li>
-      <a href="{% url 'market' market.id %}">{{ market.outcome }}</a>
+      <a href="{% url 'markets.views.showMarket' market.id %}">{{ market.outcome }}</a>
+			{% if request.user.is_staff %}
+			 - <a href="{% url 'markets.views.deleteMarket' market.id %}" >Delete</a> 
+			{% endif %}
     </li>
   {% endfor %}
 </ul>

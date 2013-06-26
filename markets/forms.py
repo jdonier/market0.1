@@ -30,7 +30,7 @@ class MarketForm(forms.Form):
 			
 class OrderForm(forms.Form):
     side = forms.ChoiceField(label="Type", choices=((1, "Buy"), (-1, "Sell")))
-    price = forms.DecimalField(label="Price", widget=forms.TextInput(attrs={'class': 'formField', 'placeholder': 'Ex : 40.12'}))
+    price = forms.DecimalField(label="Price", max_digits=4, decimal_places=4, widget=forms.TextInput(attrs={'class': 'formField', 'placeholder': 'Ex : 0.4020'}))
     volume = forms.DecimalField(label="Volume", widget=forms.TextInput(attrs={'class': 'formField', 'placeholder': 'Ex : 1.5'}))
  
 class TransferForm(forms.Form):
