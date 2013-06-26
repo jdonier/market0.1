@@ -10,7 +10,9 @@ class EventManager(models.Manager):
 		markets=Market.objects.filter(event=event)
 		volume=0
 		for market in markets:
-			volume+=Trade.objects.filter(market=market, isNull=False).aggregate(Sum('volume'))['volume__sum']
+			a=Trade.objects.filter(market=market, isNull=False).aggregate(Sum('volume'))['volume__sum']
+			if a!=None:
+				volume+=a
 		return volume
 		
 class MarketManager(models.Manager):
@@ -28,6 +30,8 @@ class MarketManager(models.Manager):
 		return openInterest
 	def tradedVolume(self, market):
 		volume=Trade.objects.filter(market=market, nullTrade=False).aggregate(Sum('volume'))['volume__sum']
+		if volume==None:
+			volume=0
 		return volume
 		
 

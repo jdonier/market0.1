@@ -124,8 +124,6 @@ def showMarket(request, idMarket):
 	cursor = connection.cursor()	
 	cursor.execute("SELECT price price, volume volume, side side, timestamp timestamp FROM markets_trade WHERE not nullTrade and market_id=%i ORDER BY timestamp DESC" % market.id)
 	trades = dictfetchall(cursor)
-	#limitsBuy=Limit.objects.filter(market=market, side=1).group_by('price').order_by('-price')
-	#limitsSell=Limit.objects.filter(market=market, side=-1).group_by('price').order_by('-price')
 	buyVolume=Limit.objects.filter(market=market, side=1).aggregate(Sum('volume'))['volume__sum']
 	if buyVolume==None:
 		buyVolume=0
