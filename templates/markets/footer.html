@@ -2,7 +2,7 @@
 <footer>
   <nav class="round">
     <ul>
-	{% if request.user.is_superuser %}
+	{% if request.user.is_authenticated %}
       <li><a href="{% url 'markets.views.createGlobalEvent' %}" >Create Global Event</a></li>
 	{% endif %}
       <li><a href="{% url 'markets.views.allGlobalEvents' %}" >Global Events</a></li>

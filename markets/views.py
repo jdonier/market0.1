@@ -2,6 +2,8 @@
 from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.shortcuts import redirect
 from datetime import datetime
+from decimal import *
+from django.utils import timezone
 from django.shortcuts import render, get_object_or_404
 import string, random
 from django.core.urlresolvers import reverse
@@ -96,7 +98,7 @@ def showMarket(request, idMarket):
 	trader=Trader()
 	if request.user.is_authenticated:
 		trader=Trader.objects.get(user=request.user)
-		if request.method == 'POST' and trader.active==True and event.status==0:
+		if request.method == 'POST' and trader.active==True and event.status==0 and event.globalEvent.dateClose>timezone.now():
 			oform = OrderForm(request.POST)
 			if oform.is_valid():
 				volume=oform.cleaned_data['volume']
@@ -106,11 +108,11 @@ def showMarket(request, idMarket):
 					execute(market, trader, side, price, volume)
 		else:
 			oform = OrderForm()
-		deposit=Trader.objects.deposit(trader=trader)
-		available=Trader.objects.availableBalance(trader=trader)
-		risk=-Trader.objects.riskEvent(trader=trader, event=market.event)
-		avgPriceSell=Trader.objects.avgPriceLimits(trader=trader, market=market, side=-1)
-		avgPriceBuy=Trader.objects.avgPriceLimits(trader=trader, market=market, side=1)
+		deposit=Decimal(Trader.objects.deposit(trader=trader)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+		available=Decimal(Trader.objects.availableBalance(trader=trader)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+		risk=-Decimal(Trader.objects.riskEvent(trader=trader, event=market.event)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+		avgPriceSell=Decimal(Trader.objects.avgPriceLimits(trader=trader, market=market, side=-1)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+		avgPriceBuy=Decimal(Trader.objects.avgPriceLimits(trader=trader, market=market, side=1)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
 	else:
 		oform = TradeForm()
 	cursor = connection.cursor()	
@@ -127,13 +129,15 @@ def showMarket(request, idMarket):
 	buyVolume=Limit.objects.filter(market=market, side=1).aggregate(Sum('volume'))['volume__sum']
 	if buyVolume==None:
 		buyVolume=0
+	buyVolume=Decimal(buyVolume).quantize(Decimal('.01'), rounding=ROUND_DOWN)
 	sellVolume=Limit.objects.filter(market=market, side=-1).aggregate(Sum('volume'))['volume__sum']
 	if sellVolume==None:
 		sellVolume=0
-	tradedVolume=Market.objects.tradedVolume(market=market)
+	sellVolume=Decimal(sellVolume).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+	tradedVolume=Decimal(Market.objects.tradedVolume(market=market)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
 	if tradedVolume==None:
 		tradedVolume=0
-	openInterest=Market.objects.openInterest(market=market)
+	openInterest=Decimal(Market.objects.openInterest(market=market)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
 	return render(request, 'markets/market.html', locals())
 	
 def showEvent(request, idEvent, page=1):	

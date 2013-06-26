@@ -101,6 +101,17 @@ section #summary{
 section #trades{
   position: relative;
   display: inline-block;
+  color: #a0a0a0;
+}
+
+section #book{
+  color: #a0a0a0;
+}
+section #datatrader{
+  font-weight: bold;
+}
+section #desc{
+  color: #a0a0a0;
 }
 
 /* Liens */
