@@ -217,7 +217,6 @@ def createEvent(request, idgEvent):
 			event.globalEvent=GlobalEvent.objects.get(id=idgEvent)
 			event.title = eform.cleaned_data['title']
 			event.description = eform.cleaned_data['description']
-			event.nbMarkets = eform.cleaned_data['nbMarkets']
 			event.creator=request.user.username
 			event.save()
 			return HttpResponseRedirect(reverse('markets.views.createMarket', args=(event.id,)))

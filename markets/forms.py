@@ -18,7 +18,6 @@ class GlobalEventForm(forms.Form):
 class EventForm(forms.Form):
 	title = forms.CharField(label="Title", max_length=30, widget=forms.TextInput(attrs={'class': 'formField', 'placeholder': 'Title'}))
 	description = forms.CharField(label="Description",  max_length=255, widget=forms.TextInput(attrs={'class': 'formField', 'placeholder': 'Description'}))
-	nbMarkets = forms.IntegerField(label="Nb Markets", widget=forms.TextInput(attrs={'class': 'formField'}))
    
 class MarketForm(forms.Form):
 	outcome = forms.CharField(label="Outcome", max_length=255, widget=forms.TextInput(attrs={'class': 'formField', 'placeholder': 'Outcome'}))

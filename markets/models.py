@@ -326,7 +326,6 @@ class Event(models.Model):
 	globalEvent = models.ForeignKey(GlobalEvent)
 	title= models.CharField(max_length=255)
 	description = models.CharField(max_length=255)	
-	nbMarkets = models.IntegerField(default=0)
 	status = models.IntegerField(default=0) #unsettled : 0, settled : 1
 	dateCreation = models.DateTimeField(auto_now_add=True)
 	creator = models.CharField(max_length=255)
