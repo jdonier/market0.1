@@ -43,6 +43,7 @@
 	  </div>
 	  <div id="order">
 		{% if request.user.is_authenticated %}
+		<div id="neworder">
 		<form action="{% url 'markets.views.showMarket' market.id %}" method="post">{% csrf_token %}
 			{{ oform.non_field_errors }}
 			<div class="fieldWrapper">
@@ -59,8 +60,23 @@
 			</div></br>
 			<p><input class="signup_button round" type="submit" value="Submit" /> </p>
 		</form>
-		{% endif %}
+		</div>
+		<div id="currentorders">
+		<div id="currentbuyorders">
+		My buy limit orders :</br><a href="{% url 'markets.views.cancelAll' market.id idUser 1 %}" >cancel all</a></br></br>
+		{% for limit in myBuyLimits %}
+		{{limit.price}} - {{limit.volume}} / {{limit.side}} - <a href="{% url 'markets.views.cancelOrder' limit.id %}" >cancel</a></br>
+		{% endfor %}</br>
+		</div>
+		<div id="currentsellorders">
+		My sell limit orders :</br><a href="{% url 'markets.views.cancelAll' market.id idUser 0 %}" >cancel all</a></br></br>
+		{% for limit in mySellLimits %}
+		{{limit.price}} - {{limit.volume}} / {{limit.side}} - <a href="{% url 'markets.views.cancelOrder' limit.id %}" >cancel</a></br>
+		{% endfor %}</br>
+		</div>
+		</div>
 	</div>
+		{% endif %}
 	  <div id="trades">
 	  Trades :</br></br>
 	  {% for trade in trades %}

@@ -90,6 +90,7 @@ section #order{
   position: relative;
   display: inline-block;
   margin-right: 50px;
+  vertical-align:top;
 }
 
 section #summary{
@@ -102,6 +103,7 @@ section #trades{
   position: relative;
   display: inline-block;
   color: #a0a0a0;
+  vertical-align:top;
 }
 
 section #book{
@@ -113,7 +115,19 @@ section #datatrader{
 section #desc{
   color: #a0a0a0;
 }
-
+section #currentbuyorders{
+  position: relative;
+  display: inline-block;
+  color: #a0a0a0;
+  vertical-align:top;
+}
+section #currentsellorders{
+  position: relative;
+  display: inline-block;
+  margin-left: 20px;
+  color: #a0a0a0;
+  vertical-align:top;
+}
 /* Liens */
 
 a {

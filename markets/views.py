@@ -105,6 +105,7 @@ def showMarket(request, idMarket):
 	trader=Trader()
 	if request.user.is_authenticated:
 		trader=Trader.objects.get(user=request.user)
+		idUser=trader.user.id
 		if request.method == 'POST' and trader.active==True and event.status==0 and event.globalEvent.dateClose>timezone.now():
 			oform = OrderForm(request.POST)
 			if oform.is_valid():
@@ -127,6 +128,8 @@ def showMarket(request, idMarket):
 		risk=-Decimal(Trader.objects.riskEvent(trader=trader, event=market.event)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
 		avgPriceSell=Decimal(Trader.objects.avgPrice(trader=trader, market=market, side=-1)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
 		avgPriceBuy=Decimal(Trader.objects.avgPrice(trader=trader, market=market, side=1)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+		myBuyLimits = Limit.objects.filter(market=market, trader=trader, side=1).order_by('-timestamp')
+		mySellLimits = Limit.objects.filter(market=market, trader=trader, side=-1).order_by('-timestamp')
 	else:
 		oform = TradeForm()	
 	cursor.execute("SELECT price price, sum(volume) volume FROM markets_limit WHERE side=1 and market_id=%i GROUP BY price ORDER BY price DESC" % market.id)
@@ -135,7 +138,7 @@ def showMarket(request, idMarket):
 	limitsSell = dictfetchall(cursor)
 	cursor.execute("SELECT price price, volume volume, side side, timestamp timestamp FROM markets_trade WHERE not nullTrade and market_id=%i ORDER BY timestamp DESC" % market.id)
 	trades = dictfetchall(cursor)
-	trades=trades[:10]
+	trades=trades[:20]
 	buyVolume=Limit.objects.filter(market=market, side=1).aggregate(Sum('volume'))['volume__sum']
 	if buyVolume==None:
 		buyVolume=0
@@ -151,6 +154,24 @@ def showMarket(request, idMarket):
 	if msgNb==1:
 		oform.non_field_errors="Not enough balance !"
 	return render(request, 'markets/market.html', locals())
+
+def cancelOrder(request, idLimit):
+	limit=Limit.objects.get(id=idLimit)
+	idMarket=limit.market.id
+	limit.delete()
+	return redirect(reverse(showMarket, kwargs={'idMarket':idMarket}))	
+
+def cancelAll(request, idMarket, idUser, side):
+	market=Market.objects.get(id=idMarket)
+	user=User.objects.get(id=idUser)
+	trader=Trader.objects.get(user=user)
+	s=-1
+	if int(side)==1:
+		s=1
+	limits=Limit.objects.filter(market=market, trader=trader,  side=s)
+	for limit in limits:
+		limit.delete()
+	return redirect(reverse(showMarket, kwargs={'idMarket':idMarket}))
 	
 def showEvent(request, idEvent, page=1):	
 	form2 = LoginForm()
