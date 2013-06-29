@@ -97,6 +97,7 @@ section #summary{
   position: relative;
   display: inline-block;
   margin-right: 50px;
+  width: 400px;
 }
 
 section #trades{
