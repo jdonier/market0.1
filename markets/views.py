@@ -6,6 +6,7 @@ from decimal import *
 from django.utils import timezone
 from django.shortcuts import render, get_object_or_404
 import string, random
+from django.db import transaction
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout 
@@ -83,12 +84,18 @@ def settleEvent(request, idEvent, idMarket):
 					trade.save()
 	return redirect(reverse(showEvent, kwargs={'idEvent':idEvent}))	
 	
+
+@transaction.commit_on_success	
 def showMarket(request, idMarket):	
 	from django.db import connection
+	cursor = connection.cursor()
 	form2 = LoginForm()
 	titre="Market"
+	deleted=''
 	market=Market.objects.get(id=idMarket)
 	event=market.event
+	msgNb=0
+	err=False
 	settled=False
 	if event.status==1:
 		settled=True
@@ -104,26 +111,31 @@ def showMarket(request, idMarket):
 				volume=oform.cleaned_data['volume']
 				price=oform.cleaned_data['price']
 				side=int(oform.cleaned_data['side'])
-				if Trader.objects.availableBalanceIf(trader=trader, newIdMarket=market.id, newSide=side, newPrice=price, newVolume=volume)>=0:					
-					execute(market, trader, side, price, volume)
+				if Trader.objects.availableBalanceIf(trader=trader, newIdMarket=market.id, newSide=side, newPrice=price, newVolume=volume)>=0:
+					try:
+						deleted=execute(market, trader, side, price, volume)
+					except:
+						msgNb=1
+						err=True
+				else:
+					msgNb=1
+					err=True	
 		else:
 			oform = OrderForm()
 		deposit=Decimal(Trader.objects.deposit(trader=trader)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
 		available=Decimal(Trader.objects.availableBalance(trader=trader)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
 		risk=-Decimal(Trader.objects.riskEvent(trader=trader, event=market.event)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
-		avgPriceSell=Decimal(Trader.objects.avgPriceLimits(trader=trader, market=market, side=-1)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
-		avgPriceBuy=Decimal(Trader.objects.avgPriceLimits(trader=trader, market=market, side=1)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+		avgPriceSell=Decimal(Trader.objects.avgPrice(trader=trader, market=market, side=-1)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+		avgPriceBuy=Decimal(Trader.objects.avgPrice(trader=trader, market=market, side=1)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
 	else:
-		oform = TradeForm()
-	cursor = connection.cursor()	
+		oform = TradeForm()	
 	cursor.execute("SELECT price price, sum(volume) volume FROM markets_limit WHERE side=1 and market_id=%i GROUP BY price ORDER BY price DESC" % market.id)
 	limitsBuy = dictfetchall(cursor)
-	cursor = connection.cursor()	
 	cursor.execute("SELECT price price, sum(volume) volume FROM markets_limit WHERE side=-1 and market_id=%i GROUP BY price ORDER BY price DESC" % market.id)
 	limitsSell = dictfetchall(cursor)
-	cursor = connection.cursor()	
 	cursor.execute("SELECT price price, volume volume, side side, timestamp timestamp FROM markets_trade WHERE not nullTrade and market_id=%i ORDER BY timestamp DESC" % market.id)
 	trades = dictfetchall(cursor)
+	trades=trades[:10]
 	buyVolume=Limit.objects.filter(market=market, side=1).aggregate(Sum('volume'))['volume__sum']
 	if buyVolume==None:
 		buyVolume=0
@@ -136,6 +148,8 @@ def showMarket(request, idMarket):
 	if tradedVolume==None:
 		tradedVolume=0
 	openInterest=Decimal(Market.objects.openInterest(market=market)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+	if msgNb==1:
+		oform.non_field_errors="Not enough balance !"
 	return render(request, 'markets/market.html', locals())
 	
 def showEvent(request, idEvent, page=1):	
@@ -185,6 +199,7 @@ def createMarket(request, idEvent):
 	form2 = LoginForm()
 	title="non"
 	event=Event.objects.get(id=idEvent)
+	markets=Market.objects.filter(event=event)
 	if request.method == "POST":
 		mform = MarketForm(request.POST)
 		if mform.is_valid():
@@ -208,6 +223,7 @@ def deleteEvent(request, idEvent):
 	
 def createEvent(request, idgEvent):
 	form2 = LoginForm()
+	gEvent=GlobalEvent.objects.get(id=idgEvent)
 	if request.method == "POST":
 		eform = EventForm(request.POST)
 		if eform.is_valid():
@@ -320,9 +336,13 @@ def home(request):
 			transfer.trader=Trader.objects.get(user=request.user)
 			transfer.type=trform.cleaned_data["type"]
 			transfer.volume=trform.cleaned_data["volume"]
-			transfer.save()
-	else:
-		trform = TransferForm()	
+			transfer.save()			
+			trform = TransferForm()	
+			trform.non_field_errors="Transfer successful !"
+		else:	
+			trform = TransferForm()	
+	else:	
+		trform = TransferForm()			
 	return render(request, 'markets/home.html', locals())
 
 
@@ -421,7 +441,7 @@ def dictfetchall(cursor):
         dict(zip([col[0] for col in desc], row))
         for row in cursor.fetchall()
     ]
-	
+
 def execute(market, trader, side, price, volume):
 	volToExec=volume
 	while side==1 and volToExec>0	and Limit.objects.filter(market=market, side=-1).aggregate(Min('price'))["price__min"]<>None and Limit.objects.filter(market=market, side=-1).aggregate(Min('price'))["price__min"]<=price:
@@ -431,15 +451,21 @@ def execute(market, trader, side, price, volume):
 		if order.volume<=volToExec:
 			trade=Trade(market=market, trader1=trader, trader2=order.trader, side=1, price=order.price, volume=order.volume, nullTrade=(trader==order.trader)) 
 			volInt=order.volume
-			order.delete()
 			volToExec-=volInt
 			trade.save()
+			if Trader.objects.availableBalance(trader=trader)>=0:
+				order.delete();
+			else:	
+				trade.delete()
 		else:
 			trade=Trade(market=market, trader1=trader, trader2=order.trader, side=1, price=order.price, volume=volToExec, nullTrade=(trader==order.trader)) 
 			order.volume-=volToExec	
-			order.save()		
 			volToExec=0
 			trade.save()
+			if Trader.objects.availableBalance(trader=trader)>=0:
+				order.save();
+			else:	
+				trade.delete()
 			
 	while side==-1 and volToExec>0 and Limit.objects.filter(market=market, side=1).aggregate(Max('price'))["price__max"]<>None and Limit.objects.filter(market=market, side=1).aggregate(Max('price'))["price__max"]>=price:
 		priceMax=Limit.objects.filter(market=market, side=1).aggregate(Max('price'))["price__max"]
@@ -448,17 +474,28 @@ def execute(market, trader, side, price, volume):
 		if order.volume<=volToExec:
 			trade=Trade(market=market, trader1=trader, trader2=order.trader, side=-1, price=order.price, volume=order.volume, nullTrade=(trader==order.trader))
 			volInt=order.volume
-			order.delete()
 			volToExec-=volInt
 			trade.save()
+			if Trader.objects.availableBalance(trader=trader)>=0:
+				order.delete();
+			else:	
+				trade.delete()
 		else:
 			trade=Trade(market=market, trader1=trader, trader2=order.trader, side=-1, price=order.price, volume=volToExec, nullTrade=(trader==order.trader)) 
 			order.volume-=volToExec	
 			order.save()		
 			volToExec=0
 			trade.save()
+			if Trader.objects.availableBalance(trader=trader)>=0:
+				order.save();
+			else:	
+				trade.delete()
 			
 	#Crée un limit order sur ce qui reste	
+	deleted=''
 	if volToExec>0:
 		limit=Limit(market=market, trader=trader, side=side, price=price, volume=volToExec)
 		limit.save()
+		if Trader.objects.availableBalance(trader=trader)<0:
+			limit.delete()
+			return 'deleted'

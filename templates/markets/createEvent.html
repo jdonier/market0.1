@@ -4,6 +4,7 @@
     <h1>New Event</h1>
 
   <p>
+  In {{gEvent.title}}
    <form action="{% url 'markets.views.createEvent' idgEvent %}" method="post">{% csrf_token %}
     {{ eform.non_field_errors }}
     <div class="fieldWrapper">

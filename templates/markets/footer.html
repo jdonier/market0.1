@@ -2,6 +2,8 @@
 <footer>
   <nav class="round">
     <ul>
+      <li><a href="{% url 'markets.views.home' %}" >Home</a></li>
+      <li><a href="{% url 'markets.views.allTraders' %}" >Traders</a></li>
 	{% if request.user.is_authenticated %}
       <li><a href="{% url 'markets.views.createGlobalEvent' %}" >Create Global Event</a></li>
 	{% endif %}

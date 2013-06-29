@@ -300,8 +300,23 @@ class TraderManager(models.Manager):
 		if volume>0:
 			avgPrice=price/volume
 		return avgPrice
-#class TradeManager(models.Manager):
-
+		
+class TradeManager(models.Manager):
+	def lock(self):
+		from django.db import connection
+		cursor = connection.cursor()
+		table = self.model._meta.db_table
+		logger.debug("Locking table %s" % table)
+		cursor.execute("LOCK TABLES %s WRITE" % table)
+		row = cursor.fetchone()
+		return row  
+	def unlock(self):
+		from django.db import connection
+		cursor = connection.cursor()
+		table = self.model._meta.db_table
+		cursor.execute("UNLOCK TABLES")
+		row = cursor.fetchone()
+		return row       
 
 class LimitManager(models.Manager):
 	def limits(self, trader, market, side):
@@ -309,7 +324,21 @@ class LimitManager(models.Manager):
 		if limits==None:
 			limits=0
 		return limits
-
+	def lock(self):
+		from django.db import connection
+		cursor = connection.cursor()
+		table = self.model._meta.db_table
+		logger.debug("Locking table %s" % table)
+		cursor.execute("LOCK TABLES %s WRITE" % table)
+		row = cursor.fetchone()
+		return row
+	def unlock(self):
+		from django.db import connection
+		cursor = connection.cursor()
+		table = self.model._meta.db_table
+		cursor.execute("UNLOCK TABLES")
+		row = cursor.fetchone()
+		return row 
 #class TransferManager(models.Manager):
 
 
@@ -350,6 +379,7 @@ class Market(models.Model):
 class Trader(models.Model):
 	user = models.OneToOneField(User) 
 	active=models.BooleanField(default=True)
+	btcAddress=models.CharField(max_length=255)
 	objects=TraderManager()
 	
 	def __unicode__(self):
@@ -365,7 +395,7 @@ class Trade(models.Model):
 	volume=models.DecimalField(max_digits=16, decimal_places=9)
 	PNL=models.DecimalField(max_digits=16, decimal_places=9, default=0) # PNL of trader 1 - Update when Event.status is set to 1
 	nullTrade=models.BooleanField() # When a trader trades with himself
-	#objects=TradeManager()
+	objects=TradeManager()
 	
 	
 		   
