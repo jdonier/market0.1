@@ -78,6 +78,7 @@
 	</div>
 		{% endif %}
 	  <div id="trades">
+	  <div id="placeholder" style="width:300px;height:200px"></div>
 	  Trades :</br></br>
 	  {% for trade in trades %}
 	  {{ trade.timestamp }} - {{trade.price}} - {{trade.volume}} / {{trade.side}} </br>
@@ -86,5 +87,29 @@
 	 </div> 
   </tr>
 </table>
+<!-- Javascript -->
+<script type="text/javascript">
+$(document).ready(function(){  
+    var data = {{graphData}};
+ 
+   
+ 
+    var options = {
+        series: {
+                   lines: { show: true },
+                   points: { show: true }
+               }
+    };
+ 
+    $.plot($("#placeholder"),
+                [
+                    {
+                    data:data,points:{symbol: "circle"}
+                    }
+                ],
+                options);
+ 
+});
+</script>
+ 
 {% endblock %}
-  

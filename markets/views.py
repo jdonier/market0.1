@@ -1,6 +1,7 @@
 ﻿#-*- coding: utf-8 -*-
 from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.shortcuts import redirect
+import flot
 from datetime import datetime
 from decimal import *
 from django.db.models import Q
@@ -87,7 +88,9 @@ def settleEvent(request, idEvent, idMarket):
 	
 
 @transaction.commit_on_success	
-def showMarket(request, idMarket):	
+def showMarket(request, idMarket):
+	series = flot.Series(data=[(1,2),(2,5),(3,7),(4,9)])
+	graph = flot.Graph([series,])
 	from django.db import connection
 	cursor = connection.cursor()
 	form2 = LoginForm()
@@ -148,6 +151,11 @@ def showMarket(request, idMarket):
 	cursor.execute("SELECT price price, volume volume, side side, timestamp timestamp FROM markets_trade WHERE not nullTrade and market_id=%i ORDER BY timestamp DESC" % market.id)
 	trades = dictfetchall(cursor)
 	trades=trades[:20]
+	graphData=[]
+	i=20
+	for trade in trades:
+		i=i-1	
+		graphData.append([i,float(trade['price'])])#[trade['volume'], trade['price']])
 	buyVolume=Limit.objects.filter(market=market, side=1).aggregate(Sum('volume'))['volume__sum']
 	if buyVolume==None:
 		buyVolume=0
