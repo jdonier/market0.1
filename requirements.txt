@@ -8,3 +8,4 @@ distribute==0.6.45
 gunicorn==0.17.4
 itsdangerous==0.21
 virtualenv==1.9.1
+flot==0.8.1
