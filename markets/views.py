@@ -3,6 +3,7 @@ from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.shortcuts import redirect
 from datetime import datetime
 from decimal import *
+from django.db.models import Q
 from django.utils import timezone
 from django.shortcuts import render, get_object_or_404
 import string, random
@@ -126,6 +127,14 @@ def showMarket(request, idMarket):
 		deposit=Decimal(Trader.objects.deposit(trader=trader)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
 		available=Decimal(Trader.objects.availableBalance(trader=trader)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
 		risk=-Decimal(Trader.objects.riskEvent(trader=trader, event=market.event)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+		myBuyVolume=Trade.objects.filter(Q(market=market) & ((Q(trader1=trader) & Q(side=1)) | (Q(trader2=trader) & Q(side=-1))) & Q(nullTrade=False)).aggregate(Sum('volume'))['volume__sum']		
+		if myBuyVolume==None:
+			myBuyVolume=0
+		myBuyVolume=Decimal(myBuyVolume).quantize(Decimal('.01'), rounding=ROUND_DOWN)	
+		mySellVolume=Trade.objects.filter(Q(market=market) & ((Q(trader1=trader) & Q(side=-1)) | (Q(trader2=trader) & Q(side=1))) & Q(nullTrade=False)).aggregate(Sum('volume'))['volume__sum']		
+		if mySellVolume==None:
+			mySellVolume=0
+		mySellVolume=Decimal(mySellVolume).quantize(Decimal('.01'), rounding=ROUND_DOWN)	
 		avgPriceSell=Decimal(Trader.objects.avgPrice(trader=trader, market=market, side=-1)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
 		avgPriceBuy=Decimal(Trader.objects.avgPrice(trader=trader, market=market, side=1)).quantize(Decimal('.01'), rounding=ROUND_DOWN)
 		myBuyLimits = Limit.objects.filter(market=market, trader=trader, side=1).order_by('-timestamp')

@@ -22,7 +22,7 @@
 		<div id="datatrader"> 		
 		{% if request.user.is_authenticated %}
 		 Deposit : {{deposit}} &nbsp; &nbsp; &nbsp;  Available : {{available}} &nbsp; &nbsp; &nbsp;  MinPNL : {{risk}}</br></br>	
-		 Avg Price Buy : {{avgPriceBuy}} &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Avg Price Sell : {{avgPriceSell}} </br>
+		 Bought : {{myBuyVolume}} at {{avgPriceBuy}} &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Sold : {{mySellVolume}} at {{avgPriceSell}} </br>
 		{% endif %}</br></br>	
 		</div>	
 
